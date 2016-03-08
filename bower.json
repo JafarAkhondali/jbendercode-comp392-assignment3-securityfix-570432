@@ -4,7 +4,7 @@
     "Josh Bender <jbendercode@gmail.com>"
   ],
   "description": "COMP392 Assignment 3 for Advanced Graphics",
-  "main": "",
+  "main": "game.js",
   "moduleType": [],
   "license": "MIT",
   "homepage": "https://github.com/jbendercode/assignment3-comp392",
