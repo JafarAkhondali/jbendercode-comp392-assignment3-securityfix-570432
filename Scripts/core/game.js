@@ -52,6 +52,9 @@ var game = (function () {
     var playerGeometry;
     var playerMaterial;
     var player;
+    var sphereGeometry;
+    var sphereMaterial;
+    var sphere;
     function init() {
         // Create to HTMLElements
         blocker = document.getElementById("blocker");
@@ -80,7 +83,7 @@ var game = (function () {
         // Scene changes for Physijs
         scene.name = "Main";
         scene.fog = new THREE.Fog(0xffffff, 0, 750);
-        //scene.setGravity(0);
+        scene.setGravity(new THREE.Vector3(0, -10, 0));
         scene.addEventListener('update', function () {
             scene.simulate(undefined, 2);
         });
@@ -124,6 +127,24 @@ var game = (function () {
         player.name = "Player";
         scene.add(player);
         console.log("Added Player to Scene");
+        player.addEventListener('collision', function (event) {
+            if (event.name === "Ground") {
+                console.log("player hit the ground");
+            }
+            if (event.name === "Sphere") {
+                console.log("player hit the sphere");
+            }
+        });
+        // Sphere Object
+        sphereGeometry = new SphereGeometry(2, 32, 32);
+        sphereMaterial = Physijs.createMaterial(new LambertMaterial({ color: 0x00ff00 }), 0.4, 0);
+        sphere = new Physijs.SphereMesh(sphereGeometry, sphereMaterial, 1);
+        sphere.position.set(0, 60, 10);
+        sphere.receiveShadow = true;
+        sphere.castShadow = true;
+        sphere.name = "Sphere";
+        scene.add(sphere);
+        console.log("Added Sphere to Scene");
         // add controls
         gui = new GUI();
         control = new Control();
