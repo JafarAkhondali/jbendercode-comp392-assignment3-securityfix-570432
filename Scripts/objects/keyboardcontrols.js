@@ -11,57 +11,53 @@ var objects;
         // PUBLIC METHODS
         KeyboardControls.prototype.onKeyDown = function (event) {
             switch (event.keyCode) {
-                // Forward
-                case 38: // Up Arrow
+                case 38: /*up arrow*/
                 case 87:
                     this.moveForward = true;
                     break;
-                // Left
-                case 37: // Left Arrow
+                case 37: /*left arrow*/
                 case 65:
                     this.moveLeft = true;
                     break;
-                // Down
-                case 40: // Down Arrow
+                case 40: /*down arrow*/
                 case 83:
                     this.moveBackward = true;
                     break;
-                // Right
-                case 39: // Right Arrow
+                case 39: /*right arrow*/
                 case 68:
                     this.moveRight = true;
                     break;
-                // Jump
                 case 32:
                     this.jump = true;
+                    break;
+                case 16:
+                    this.duck = true;
                     break;
             }
         };
         KeyboardControls.prototype.onKeyUp = function (event) {
             switch (event.keyCode) {
-                // Forward
-                case 38: // Up Arrow
+                case 38: /*up arrow*/
                 case 87:
                     this.moveForward = false;
                     break;
-                // Left
-                case 37: // Left Arrow
+                case 37: /*left arrow*/
                 case 65:
                     this.moveLeft = false;
                     break;
-                // Down
-                case 40: // Down Arrow
+                case 40: /*down arrow*/
                 case 83:
                     this.moveBackward = false;
                     break;
-                // Right
-                case 39: // Right Arrow
+                case 39: /*right arrow*/
                 case 68:
                     this.moveRight = false;
                     break;
-                // Jump
                 case 32:
                     this.jump = false;
+                    break;
+                case 16:
+                    this.duck = false;
                     break;
             }
         };
