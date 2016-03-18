@@ -225,6 +225,9 @@ var game = (function () {
             }
             if (object.name === "Sphere") {
                 scene.remove(object);
+                scene.add(object);
+                sphere.position.set(0, 2, sphere.position.z - 300);
+                sphere.__dirtyPosition = true;
                 console.log("player hit the sphere");
             }
         });
@@ -250,7 +253,7 @@ var game = (function () {
         // Add DirectionLine
         directionLineMaterial = new LineBasicMaterial({ color: 0xFFFF00 });
         directionLineGeometry = new Geometry();
-        directionLineGeometry.vertices.push(new Vector3(0, 0, -0)); // line origin
+        directionLineGeometry.vertices.push(new Vector3(0, 0, 0)); // line origin
         directionLineGeometry.vertices.push(new Vector3(0, 0, -500)); // line end
         directionLine = new Line(directionLineGeometry, directionLineMaterial);
         directionLine.name = "DirectionLine";
@@ -264,9 +267,9 @@ var game = (function () {
         });
         // Sphere Object
         sphereGeometry = new SphereGeometry(1, 4, 2);
-        sphereMaterial = Physijs.createMaterial(new LambertMaterial({ color: 0x00ff00 }), 0.4, 0);
-        sphere = new Physijs.SphereMesh(sphereGeometry, sphereMaterial, 0.01);
-        sphere.position.set(0, 10, -120);
+        sphereMaterial = Physijs.createMaterial(new LambertMaterial({ color: 0x00ff00 }), 0, 0);
+        sphere = new Physijs.SphereMesh(sphereGeometry, sphereMaterial, 0.0000001);
+        sphere.position.set(0, 2, -120);
         sphere.receiveShadow = true;
         sphere.castShadow = true;
         sphere.name = "Sphere";
@@ -386,6 +389,9 @@ var game = (function () {
             mouseControls.mouseX = 0;
             mouseControls.mouseY = 0;
             prevTime = time;
+            player.__dirtyRotation;
+            player.rotation.set(0, 0, 0);
+            player.__dirtyRotation = true;
         } // keyboardControls.enabled
         else {
             player.setAngularVelocity(new Vector3(0, 0, 0));

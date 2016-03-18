@@ -177,6 +177,7 @@ declare module Physijs {
         setCcdMotionThreshold(threshold:number):void;
         setCcdSweptSphereRadius(radius:number):void;
         __dirtyPosition:boolean; // Added to ignore dirty position errors
+        __dirtyRotation:boolean; // Added to ignore dirty rotation errors
 
 
         // Eventable mixins
