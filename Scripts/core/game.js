@@ -56,6 +56,7 @@ var game = (function () {
     var groundTexture;
     var groundTextureNormal;
     var ground;
+    var ground2;
     var clock;
     var playerGeometry;
     var playerPhysicsMaterial;
@@ -75,6 +76,7 @@ var game = (function () {
     var directionLine;
     var direction;
     var cameraLookAt;
+    var onGround1;
     function init() {
         // Create to HTMLElements
         blocker = document.getElementById("blocker");
@@ -87,6 +89,8 @@ var game = (function () {
         keyboardControls = new objects.KeyboardControls();
         mouseControls = new objects.MouseControls();
         direction = new Vector3(0, 0, 0);
+        // Initialize player onGround1 to be true
+        onGround1 = true;
         // Check for Pointer Lock
         if (havePointerLock) {
             element = document.body;
@@ -156,13 +160,24 @@ var game = (function () {
         groundMaterial.bumpMap = groundTextureNormal;
         groundMaterial.bumpScale = 0.2;*/
         groundMaterial = new PhongMaterial({ color: 0x00FFFF });
-        groundGeometry = new BoxGeometry(4000, 1, 4000);
+        var GroundMaterial2 = new PhongMaterial({ color: 0xFFFF00 });
+        groundGeometry = new BoxGeometry(1600, 0.5, 800);
         groundPhysicsMaterial = Physijs.createMaterial(groundMaterial, 0, 0);
+        var groundPhysicsMaterial2 = Physijs.createMaterial(GroundMaterial2, 0, 0);
         ground = new Physijs.ConvexMesh(groundGeometry, groundPhysicsMaterial, 0);
         ground.receiveShadow = true;
-        ground.name = "Ground";
+        ground.name = "Ground 1";
         scene.add(ground);
-        console.log("Added Endless Plane to scene");
+        ground.position.set(0, 0, 0);
+        ground.__dirtyPosition = true;
+        console.log("Added Ground 1 to scene");
+        ground2 = new Physijs.ConvexMesh(groundGeometry, groundPhysicsMaterial2, 0);
+        ground2.receiveShadow = true;
+        ground2.name = "Ground 2";
+        ground2.position.set(0, 0, -800);
+        ground2.__dirtyPosition = true;
+        scene.add(ground2);
+        console.log("Added Ground 2 to scene");
         // Player Object
         /* Player Texture
         playerTexture = new THREE.TextureLoader().load('../../Assets/images/metalTexture.jpg');
@@ -172,7 +187,7 @@ var game = (function () {
         
         playerMaterial.map = groundTexture;*/
         playerMaterial = new PhongMaterial({ color: 0xFF0000 });
-        playerGeometry = new BoxGeometry(20, 4, 1);
+        playerGeometry = new BoxGeometry(20, 4, 8);
         playerPhysicsMaterial = Physijs.createMaterial(playerMaterial, 0, 0);
         player = new Physijs.BoxMesh(playerGeometry, playerPhysicsMaterial, 2);
         player.position.set(0, 2, 10);
@@ -182,12 +197,29 @@ var game = (function () {
         scene.add(player);
         console.log("Added Player to Scene");
         player.addEventListener('collision', function (object) {
-            if (object.name === "Ground") {
-                console.log("player hit the ground");
+            if (object.name === "Ground 1") {
+                if (!onGround1) {
+                    setTimeout(function () {
+                        ground2.position.set(0, 0, ground2.position.z - 1600);
+                        ground2.__dirtyPosition = true;
+                    }, 1000);
+                }
+                onGround1 = true;
+                console.log("player hit the ground 1");
+                isGrounded = true;
+            }
+            if (object.name === "Ground 2") {
+                if (onGround1) {
+                    setTimeout(function () {
+                        ground.position.set(0, 0, ground.position.z - 1600);
+                        ground.__dirtyPosition = true;
+                    }, 1000);
+                }
+                onGround1 = false;
+                console.log("player hit the ground 2");
                 isGrounded = true;
             }
             if (object.name === "Sphere") {
-                console.log(event);
                 scene.remove(object);
                 console.log("player hit the sphere");
             }
@@ -217,8 +249,8 @@ var game = (function () {
         // Sphere Object
         sphereGeometry = new SphereGeometry(1, 32, 32);
         sphereMaterial = Physijs.createMaterial(new LambertMaterial({ color: 0x00ff00 }), 0.4, 0);
-        sphere = new Physijs.SphereMesh(sphereGeometry, sphereMaterial, 1);
-        sphere.position.set(0, 10, 5);
+        sphere = new Physijs.SphereMesh(sphereGeometry, sphereMaterial, 0.01);
+        sphere.position.set(0, 10, -20);
         sphere.receiveShadow = true;
         sphere.castShadow = true;
         sphere.name = "Sphere";
@@ -297,19 +329,20 @@ var game = (function () {
             var time = performance.now();
             var delta = (time - prevTime) / 1000;
             var direction = new Vector3(0, 0, 0);
+            velocity.z = -12000.00 * delta;
             if (isGrounded) {
                 if (keyboardControls.moveForward) {
-                    velocity.z -= 12000.0 * delta;
+                    velocity.z *= 4.0;
                 }
-                if (keyboardControls.moveLeft) {
+                /*if (keyboardControls.moveLeft) {
                     velocity.x -= 12000.0 * delta;
-                }
+                }*/
                 if (keyboardControls.moveBackward) {
-                    velocity.z += 12000.0 * delta;
+                    velocity.z *= 0.5;
                 }
-                if (keyboardControls.moveRight) {
+                /*if (keyboardControls.moveRight) {
                     velocity.x += 12000.0 * delta;
-                }
+                }*/
                 if (keyboardControls.jump && !keyboardControls.duck) {
                     velocity.y += 24000.0 * delta;
                     if (player.position.y > 4) {
@@ -318,7 +351,7 @@ var game = (function () {
                 }
                 if (keyboardControls.duck) {
                 }
-                player.setDamping(0.7, 0.1);
+                player.setDamping(0.7, 1);
                 // Chaning player rotation
                 player.setAngularVelocity(new Vector3(0, -mouseControls.yaw, 0));
                 direction.addVectors(direction, velocity); // Add velocity to player Vector
@@ -356,9 +389,8 @@ var game = (function () {
     // Setup main camera for the scene
     function setupCamera() {
         camera = new PerspectiveCamera(35, config.Screen.RATIO, 0.1, 500);
-        //camera.lookAt(new Vector3(0, 0, 0));  
-        camera.position.set(0, 10, 30); // 3P
-        //camera.position.set(0, 1, -2);        // FP
+        camera.position.set(0, 30, 80); // 3P
+        //camera.position.set(0, 1, -4);        // FP
         console.log("Finished setting up Camera...");
     }
     window.onload = init;
