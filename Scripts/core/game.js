@@ -22,16 +22,11 @@ var Object3D = THREE.Object3D;
 var SpotLight = THREE.SpotLight;
 var PointLight = THREE.PointLight;
 var AmbientLight = THREE.AmbientLight;
-var Control = objects.Control;
-var GUI = dat.GUI;
 var Color = THREE.Color;
 var Vector3 = THREE.Vector3;
 var Face3 = THREE.Face3;
-var Point = objects.Point;
 var CScreen = config.Screen;
 var Clock = THREE.Clock;
-//Custom Game Objects
-var gameObject = objects.gameObject;
 // Setup a Web Worker for Physijs
 Physijs.scripts.worker = "/Scripts/lib/Physijs/physijs_worker.js";
 Physijs.scripts.ammo = "/Scripts/lib/Physijs/examples/js/ammo.js";
@@ -43,8 +38,6 @@ var game = (function () {
     var scene = new Scene(); // Instantiate Scene Object
     var renderer;
     var camera;
-    var control;
-    var gui;
     var stats;
     var blocker;
     var instructions;
@@ -61,26 +54,56 @@ var game = (function () {
     var playerGeometry;
     var playerPhysicsMaterial;
     var playerMaterial;
-    var playerTexture;
     var player;
-    var sphereGeometry;
-    var sphereMaterial;
-    var sphere;
+    var gemGeometry;
+    var gemMaterial;
+    var gem;
     var keyboardControls;
     var mouseControls;
     var isGrounded;
     var velocity = new Vector3(0, 0, 0);
     var prevTime = 0;
-    var directionLineMaterial;
-    var directionLineGeometry;
-    var directionLine;
     var direction;
     var cameraLookAt;
     var onGround1;
-    var tempObj;
     var speedMultiplier;
+    var obstacleSlowdown;
+    var reticle;
+    var reticleTexture;
+    var reticleGeom;
+    var reticleMat;
+    var reticleColliderGeom;
+    var reticleColliderMat;
+    var reticleColliderPhysicsMat;
+    var reticleCollider;
+    var warningGeom;
+    var warningMat;
+    var warning;
+    var lowObstacles;
+    var lowObstacleGeom;
+    var lowObstacleMat;
+    var lowObstacleTexture;
+    var lowObstaclePhysicsMat;
+    var highObstacles;
+    var highObstacleGeom;
+    var highObstacleMat;
+    var highObstacleTexture;
+    var highObstaclePhysicsMat;
+    var currentObstacle;
+    var obstaclesPlaced;
+    // Create JS variables
+    var assets;
+    var manifest = [
+        { id: "reticle", src: "../../Assets/images/reticle.png" }
+    ];
+    function preload() {
+        assets = new createjs.LoadQueue();
+        assets.installPlugin(createjs.Sound);
+        assets.on("complete", init, this);
+        assets.loadManifest(manifest);
+    }
     function init() {
-        // Create to HTMLElements
+        // Create instruction  HTMLElements
         blocker = document.getElementById("blocker");
         instructions = document.getElementById("instructions");
         //check to see if pointerlock is supported
@@ -90,11 +113,13 @@ var game = (function () {
         // Instantiate Game Controls
         keyboardControls = new objects.KeyboardControls();
         mouseControls = new objects.MouseControls();
+        // Initialize Game variables
         direction = new Vector3(0, 0, 0);
-        // Initialize player onGround1 to be true
         onGround1 = true;
-        // Set Speed Multiplier
         speedMultiplier = 1;
+        obstacleSlowdown = 1;
+        currentObstacle = 0;
+        obstaclesPlaced = 0;
         // Check for Pointer Lock
         if (havePointerLock) {
             element = document.body;
@@ -112,8 +137,6 @@ var game = (function () {
             document.addEventListener('pointerlockerror', pointerLockError, false);
             document.addEventListener('mozpointerlockerror', pointerLockError, false);
             document.addEventListener('webkitpointerlockerror', pointerLockError, false);
-            // Hook mouse move events
-            document.addEventListener("mousemove", this.moveCallback, false);
         }
         // Scene changes for Physijs
         scene.name = "Main";
@@ -122,11 +145,11 @@ var game = (function () {
         scene.addEventListener('update', function () {
             scene.simulate(undefined, 2);
         });
-        // setup a THREE.JS Clock object
+        // Setup
         clock = new Clock();
         setupRenderer(); // setup the default renderer
         setupCamera(); // setup the camera
-        // Add an AmbientLight to the scene
+        // Ambient Light
         ambientLight = new AmbientLight(0x909090);
         scene.add(ambientLight);
         console.log("Added an Ambient Light to Scene");
@@ -148,26 +171,13 @@ var game = (function () {
         spotLight.name = "Spot Light";
         scene.add(spotLight);
         console.log("Added spotLight to scene");*/
-        // Ground Object
-        /* Texture
-        groundTexture = new THREE.TextureLoader().load('../../Assets/images/GravelCobble.jpg');
-        groundTexture.wrapS = THREE.RepeatWrapping;
-        groundTexture.wrapT = THREE.RepeatWrapping;
-        groundTexture.repeat.set(4, 4);
-        // Normal Map
-        groundTextureNormal = new THREE.TextureLoader().load('../../Assets/images/GravelCobbleNormal.jpg');
-        groundTextureNormal.wrapS = THREE.RepeatWrapping;
-        groundTextureNormal.wrapT = THREE.RepeatWrapping;
-        groundTextureNormal.repeat.set(4, 4);
-        
-        groundMaterial.map = groundTexture;
-        groundMaterial.bumpMap = groundTextureNormal;
-        groundMaterial.bumpScale = 0.2;*/
+        // Ground Objects
         groundMaterial = new PhongMaterial({ color: 0x00FFFF });
         var GroundMaterial2 = new PhongMaterial({ color: 0xFFFF00 });
-        groundGeometry = new BoxGeometry(1600, 0.5, 1600);
+        groundGeometry = new BoxGeometry(1600, 0.5, 3200);
         groundPhysicsMaterial = Physijs.createMaterial(groundMaterial, 0, 0);
         var groundPhysicsMaterial2 = Physijs.createMaterial(GroundMaterial2, 0, 0);
+        // Ground 1
         ground = new Physijs.ConvexMesh(groundGeometry, groundPhysicsMaterial, 0);
         ground.receiveShadow = true;
         ground.name = "Ground 1";
@@ -175,21 +185,15 @@ var game = (function () {
         ground.position.set(0, 0, 0);
         ground.__dirtyPosition = true;
         console.log("Added Ground 1 to scene");
+        // Ground 2
         ground2 = new Physijs.ConvexMesh(groundGeometry, groundPhysicsMaterial2, 0);
         ground2.receiveShadow = true;
         ground2.name = "Ground 2";
-        ground2.position.set(0, 0, -1600);
+        ground2.position.set(0, 0, -3200);
         ground2.__dirtyPosition = true;
         scene.add(ground2);
         console.log("Added Ground 2 to scene");
         // Player Object
-        /* Player Texture
-        playerTexture = new THREE.TextureLoader().load('../../Assets/images/metalTexture.jpg');
-        playerTexture.wrapS = THREE.RepeatWrapping;
-        playerTexture.wrapT = THREE.RepeatWrapping;
-        playerTexture.repeat.set(2, 2);
-        
-        playerMaterial.map = groundTexture;*/
         playerMaterial = new PhongMaterial({ color: 0xFF0000 });
         playerGeometry = new BoxGeometry(20, 4, 8);
         playerPhysicsMaterial = Physijs.createMaterial(playerMaterial, 0, 0);
@@ -200,11 +204,12 @@ var game = (function () {
         player.name = "Player";
         scene.add(player);
         console.log("Added Player to Scene");
+        // Player Collisions
         player.addEventListener('collision', function (object) {
             if (object.name === "Ground 1") {
                 if (!onGround1) {
                     setTimeout(function () {
-                        ground2.position.set(0, 0, ground2.position.z - 3200);
+                        ground2.position.set(0, 0, ground2.position.z - 6400);
                         ground2.__dirtyPosition = true;
                     }, 1000);
                 }
@@ -215,7 +220,7 @@ var game = (function () {
             if (object.name === "Ground 2") {
                 if (onGround1) {
                     setTimeout(function () {
-                        ground.position.set(0, 0, ground.position.z - 3200);
+                        ground.position.set(0, 0, ground.position.z - 6400);
                         ground.__dirtyPosition = true;
                     }, 1000);
                 }
@@ -223,68 +228,134 @@ var game = (function () {
                 console.log("player hit the ground 2");
                 isGrounded = true;
             }
-            if (object.name === "Sphere") {
+            if (object.name === "Gem") {
                 scene.remove(object);
+                gem.position.set(0, 2, gem.position.z - 240);
+                gem.__dirtyPosition = true;
                 scene.add(object);
-                sphere.position.set(0, 2, sphere.position.z - 300);
-                sphere.__dirtyPosition = true;
-                console.log("player hit the sphere");
+                console.log("player hit the gem");
+                warnPlayer();
+            }
+            if (object.name.indexOf("LowObstacle") > -1) {
+                scene.remove(object);
+                spawnNewObstacle();
+                //scene.add(object);
+                console.log("player hit a Low Obstacle");
+                warnPlayer();
+                obstacleSlowdown = 0.02;
+                setTimeout(function () {
+                    obstacleSlowdown = 1;
+                }, 1000);
+            }
+            if (object.name.indexOf("HighObstacle") > -1) {
+                scene.remove(object);
+                spawnNewObstacle();
+                //scene.add(object);
+                console.log("player hit a High Obstacle");
+                warnPlayer();
+                obstacleSlowdown = 0.02;
+                setTimeout(function () {
+                    obstacleSlowdown = 1;
+                }, 1000);
             }
         });
-        // Add camera lookAt
+        // Add camera LookAt
         cameraLookAt = new Object3D();
         cameraLookAt.name = "Camera LookAt";
         scene.add(cameraLookAt);
         cameraLookAt.position.set(player.position.x, 2, player.position.z - 4);
-        // Add camera to cameraLookAt
+        cameraLookAt.name = "Camera LookAt";
         cameraLookAt.add(camera);
-        playerTexture = new THREE.TextureLoader().load('../../Assets/images/reticle.png');
-        playerTexture.wrapS = THREE.RepeatWrapping;
-        playerTexture.wrapT = THREE.RepeatWrapping;
-        playerTexture.repeat.set(1, 1);
-        var tempGeom = new PlaneGeometry(0.16, 0.09);
-        var tempMat = new LambertMaterial();
-        tempMat.map = playerTexture;
-        tempMat.transparent = true;
-        tempMat.opacity = 1;
-        tempObj = new Mesh(tempGeom, tempMat);
-        cameraLookAt.add(tempObj);
-        tempObj.position.set(0, 0, -0.2);
-        // Add DirectionLine
-        directionLineMaterial = new LineBasicMaterial({ color: 0xFFFF00 });
-        directionLineGeometry = new Geometry();
-        directionLineGeometry.vertices.push(new Vector3(0, 0, 0)); // line origin
-        directionLineGeometry.vertices.push(new Vector3(0, 0, -500)); // line end
-        directionLine = new Line(directionLineGeometry, directionLineMaterial);
-        directionLine.name = "DirectionLine";
-        tempObj.add(directionLine);
-        console.log("Added directionLine to cameraLookAt...");
-        directionLine.addEventListener('collision', function (object) {
-            if (object.name === "Sphere") {
+        // Player Reticle
+        reticleTexture = new THREE.TextureLoader().load('../../Assets/images/reticle.png');
+        reticleTexture.wrapS = THREE.RepeatWrapping;
+        reticleTexture.wrapT = THREE.RepeatWrapping;
+        reticleTexture.repeat.set(1, 1);
+        reticleGeom = new PlaneGeometry(0.16, 0.09);
+        reticleMat = new LambertMaterial();
+        reticleMat.map = reticleTexture;
+        reticleMat.transparent = true;
+        reticleMat.opacity = 1;
+        reticle = new Mesh(reticleGeom, reticleMat);
+        reticle.name = "Reticle";
+        cameraLookAt.add(reticle);
+        reticle.position.set(0, 0, -0.2);
+        // Player Warning
+        warningGeom = new PlaneGeometry(1, 1);
+        warningMat = new LambertMaterial({ color: 0xFF0000 });
+        warningMat.transparent = true;
+        warningMat.opacity = 0;
+        warning = new Mesh(warningGeom, warningMat);
+        warning.name = "Warning";
+        cameraLookAt.add(warning);
+        warning.position.set(0, 0, -0.3);
+        /* Add Reticle Collider
+        reticleColliderMat = new PhongMaterial({ color: 0xFF0000 });
+        reticleColliderGeom = new BoxGeometry(0.01, 0.01, 500);
+        reticleColliderPhysicsMat = Physijs.createMaterial(reticleColliderMat, 0, 0);
+
+        reticleCollider = new Physijs.BoxMesh(reticleColliderGeom, reticleColliderPhysicsMat, 0);
+        reticleCollider.position.set(0, 0, -250);
+        reticleCollider.receiveShadow = true;
+        reticleCollider.castShadow = true;
+        reticleCollider.name = "Reticle Collider";
+        reticle.add(reticleCollider);
+        console.log("Added Reticle Collider to Scene");
+        
+        reticleCollider.addEventListener('collision', (object) => {
+            if (object.name === "gem") {
                 //scene.remove(object);
-                console.log("line hit the sphere");
+                //scene.add(object);
+                //gem.position.set(0, 2, gem.position.z - 300);
+                //gem.__dirtyPosition = true;
+                console.log("reticleCollider hit the gem");
             }
-        });
-        // Sphere Object
-        sphereGeometry = new SphereGeometry(1, 4, 2);
-        sphereMaterial = Physijs.createMaterial(new LambertMaterial({ color: 0x00ff00 }), 0, 0);
-        sphere = new Physijs.SphereMesh(sphereGeometry, sphereMaterial, 0.0000001);
-        sphere.position.set(0, 2, -120);
-        sphere.receiveShadow = true;
-        sphere.castShadow = true;
-        sphere.name = "Sphere";
-        scene.add(sphere);
-        console.log("Added Sphere to Scene");
-        // add controls
-        gui = new GUI();
-        control = new Control();
-        addControl(control);
+        });*/
+        // Gem Object
+        gemGeometry = new SphereGeometry(1, 4, 2);
+        gemMaterial = Physijs.createMaterial(new LambertMaterial({ color: 0x00ff00 }), 0, 0);
+        gem = new Physijs.SphereMesh(gemGeometry, gemMaterial, 0.00000000001);
+        gem.position.set(0, 2, -120);
+        gem.receiveShadow = true;
+        gem.castShadow = true;
+        gem.name = "Gem";
+        //scene.add(gem);
+        console.log("Added Gem to Scene");
+        // Obstacles
+        // Low Obstacles
+        lowObstacles = [];
+        lowObstacleMat = new LambertMaterial({ color: 0x0000FF });
+        lowObstacleGeom = new BoxGeometry(200, 1.5, 4);
+        lowObstaclePhysicsMat = Physijs.createMaterial(lowObstacleMat, 0, 0);
+        for (var i = 0; i < 5; i++) {
+            lowObstacles[i] = new Physijs.BoxMesh(lowObstacleGeom, lowObstaclePhysicsMat, 0.00000000001);
+            lowObstacles[i].position.set(0, -1000, 0);
+            lowObstacles[i].receiveShadow = true;
+            lowObstacles[i].castShadow = true;
+            lowObstacles[i].name = "LowObstacle_" + i;
+        }
+        // High Obstacles
+        highObstacles = [];
+        highObstacleMat = new LambertMaterial({ color: 0x00FF00 });
+        highObstacleGeom = new BoxGeometry(200, 3, 4);
+        highObstaclePhysicsMat = Physijs.createMaterial(highObstacleMat, 0, 0);
+        for (var i = 0; i < 5; i++) {
+            highObstacles[i] = new Physijs.BoxMesh(highObstacleGeom, highObstaclePhysicsMat, 0.00000000001);
+            highObstacles[i].position.set(0, 1.5, -1000 * (i + 1));
+            highObstacles[i].receiveShadow = true;
+            highObstacles[i].castShadow = true;
+            highObstacles[i].name = "HighObstacle_" + i;
+        }
+        // Spawn First Obstacle
+        spawnNewObstacle();
         // Add framerate stats
         addStatsObject();
         console.log("Added Stats to scene...");
+        // Render the scene	
         document.body.appendChild(renderer.domElement);
-        gameLoop(); // render the scene	
+        gameLoop();
         scene.simulate();
+        // Window Resize Check
         window.addEventListener('resize', onWindowResize, false);
     }
     //PointerLockChange Event Handler
@@ -319,9 +390,6 @@ var game = (function () {
         camera.updateProjectionMatrix();
         renderer.setSize(window.innerWidth, window.innerHeight);
     }
-    function addControl(controlObject) {
-        /* ENTER CODE for the GUI CONTROL HERE */
-    }
     // Add Frame Rate Stats to the Scene
     function addStatsObject() {
         stats = new Stats();
@@ -336,15 +404,45 @@ var game = (function () {
         stats.update();
         //speedMultiplier += 0.00001;
         cameraLookAt.position.set(player.position.x, player.position.y, player.position.z - 4);
-        if (tempObj.position.x <= sphere.position.x + 0.005 && tempObj.position.x >= sphere.position.x - 0.005) {
-            if (tempObj.position.y <= sphere.position.y + 2 && tempObj.position.y >= sphere.position.y - 2) {
-            }
-        }
         checkControls();
         // render using requestAnimationFrame
         requestAnimationFrame(gameLoop);
         // render the scene
         renderer.render(scene, camera);
+    }
+    // Player warning
+    function warnPlayer() {
+        var time = performance.now();
+        var delta = (time - prevTime) / 1000;
+        warningMat.opacity = 0.4;
+        setTimeout(function () {
+            while (warningMat.opacity > 0) {
+                warningMat.opacity = 0;
+            }
+        }, 500);
+    }
+    // Spawn Obstacles
+    function spawnNewObstacle() {
+        var x = Math.floor((Math.random() * 10) + 1);
+        var m = Math.floor((Math.random() * 600) + 1);
+        if (x > 5) {
+            var obstacles = highObstacles;
+            var spawnHeight = 2;
+        }
+        else {
+            var obstacles = lowObstacles;
+            var spawnHeight = 0.75;
+        }
+        obstacles[currentObstacle].position.set(0, spawnHeight, ((obstaclesPlaced + 1) * -600) - m);
+        scene.add(obstacles[currentObstacle]);
+        // Move Obstacle Counter Up
+        obstaclesPlaced++;
+        if (currentObstacle >= 3) {
+            currentObstacle = 0;
+        }
+        else {
+            currentObstacle++;
+        }
     }
     // Check Controls
     function checkControls() {
@@ -353,27 +451,19 @@ var game = (function () {
             var time = performance.now();
             var delta = (time - prevTime) / 1000;
             var direction = new Vector3(0, 0, 0);
-            velocity.z = -12000.00 * delta;
+            velocity.z = -12000.00 * delta * obstacleSlowdown;
             if (isGrounded) {
                 if (keyboardControls.moveForward) {
                     velocity.z *= 4.0;
                 }
-                /*if (keyboardControls.moveLeft) {
-                    velocity.x -= 12000.0 * delta;
-                }*/
                 if (keyboardControls.moveBackward) {
                     velocity.z *= 0.25;
                 }
-                /*if (keyboardControls.moveRight) {
-                    velocity.x += 12000.0 * delta;
-                }*/
                 if (keyboardControls.jump && !keyboardControls.duck) {
                     velocity.y += 24000.0 * delta;
-                    if (player.position.y > 4) {
+                    if (player.position.y > 6) {
                         isGrounded = false;
                     }
-                }
-                if (keyboardControls.duck) {
                 }
                 player.setDamping(0.7, 1);
                 // Changing player rotation
@@ -389,12 +479,12 @@ var game = (function () {
             mouseControls.mouseX = 0;
             mouseControls.mouseY = 0;
             prevTime = time;
-            player.__dirtyRotation;
             player.rotation.set(0, 0, 0);
             player.__dirtyRotation = true;
         } // keyboardControls.enabled
         else {
             player.setAngularVelocity(new Vector3(0, 0, 0));
+            player.setLinearVelocity(new Vector3(0, 0, 0));
         }
     }
     // Camera Look function
@@ -407,27 +497,24 @@ var game = (function () {
         cameraLookAt.rotation.x = THREE.Math.clamp(cameraPitch, nadir, zenith);
         cameraLookAt.rotation.y = THREE.Math.clamp(cameraYaw, nadir, zenith);
         // Constrain Reticle
-        if (tempObj.position.x > 0.12) {
-            tempObj.position.x -= 0.001;
+        if (reticle.position.x > 0.12) {
+            reticle.position.x -= 0.001;
         }
-        else if (tempObj.position.x < -0.12) {
-            tempObj.position.x += 0.001;
-        }
-        else {
-            tempObj.position.x += mouseControls.mouseX;
-        }
-        if (tempObj.position.y > 0.06) {
-            tempObj.position.y -= 0.001;
-        }
-        else if (tempObj.position.y < -0.06) {
-            tempObj.position.y += 0.001;
+        else if (reticle.position.x < -0.12) {
+            reticle.position.x += 0.001;
         }
         else {
-            tempObj.position.y += mouseControls.mouseY;
+            reticle.position.x += mouseControls.mouseX;
         }
-        // Update collision line
-        directionLineGeometry.vertices[1].set(tempObj.position.x, tempObj.position.y, tempObj.position.z);
-        directionLineGeometry.verticesNeedUpdate = true;
+        if (reticle.position.y > 0.06) {
+            reticle.position.y -= 0.001;
+        }
+        else if (reticle.position.y < -0.06) {
+            reticle.position.y += 0.001;
+        }
+        else {
+            reticle.position.y += mouseControls.mouseY;
+        }
         camera.rotation.x = cameraLookAt.rotation.x;
         camera.rotation.y = cameraLookAt.rotation.y;
     }
@@ -442,12 +529,12 @@ var game = (function () {
     }
     // Setup main camera for the scene
     function setupCamera() {
-        camera = new PerspectiveCamera(35, config.Screen.RATIO, 0.1, 500);
+        camera = new PerspectiveCamera(35, config.Screen.RATIO, 0.1, 1000);
         //camera.position.set(0, 30, 80);         // 3P
         camera.position.set(0, 0, 0); // FP
         console.log("Finished setting up Camera...");
     }
-    window.onload = init;
+    window.onload = preload;
     return {
         scene: scene
     };
