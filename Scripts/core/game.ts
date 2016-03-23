@@ -97,10 +97,20 @@ var game = (() => {
     var highObstaclePhysicsMat: Physijs.Material;
     var currentObstacle: number;
     var obstaclesPlaced: number;
+    var wait: boolean;
+    var multiplierStep: number;
     
-    
-    // Create JS variables
+    // CreateJS Related Variables
     var assets: createjs.LoadQueue;
+    var canvas: HTMLElement;
+    var stage: createjs.Stage;
+    var scoreLabel: createjs.Text;
+    var timerLabel: createjs.Text;
+    var multiplierLabel: createjs.Text;
+    var scoreValue: number;
+    var timerValue: number;
+    var multiplierValue: number;
+
     var manifest = [
       {id: "reticle", src: "../../Assets/images/reticle.png"}  
     ];
@@ -111,12 +121,68 @@ var game = (() => {
         assets.on("complete", init, this);
         assets.loadManifest(manifest);
     }
+    
+    function setupCanvas(): void {
+        canvas = document.getElementById("canvas");
+        canvas.setAttribute("width", config.Screen.WIDTH.toString());
+        canvas.setAttribute("height", (config.Screen.HEIGHT * 0.06).toString());
+        canvas.style.backgroundColor = "#000000";
+        stage = new createjs.Stage(canvas);
+    }
+
+    function setupScoreboard(): void {
+        // initialize  score and timer values
+        scoreValue = 0;
+        timerValue = 30;
+        multiplierValue = 1;
+        multiplierStep = 1;
+
+        // Add timer Label
+        timerLabel = new createjs.Text(
+            "TIME: " + timerValue,
+            "30px Consolas",
+            "#ffffff"
+        );
+        timerLabel.x = config.Screen.WIDTH * 0.1;
+        timerLabel.y = (config.Screen.HEIGHT * 0.15) * 0.09;
+        stage.addChild(timerLabel);
+        console.log("Added timer Label to stage");
+        
+        // Add multiplier Label
+        multiplierLabel = new createjs.Text(
+            "BONUS: x" + multiplierValue,
+            "30px Consolas",
+            "#ffffff"
+        );
+        multiplierLabel.x = config.Screen.WIDTH * 0.45;
+        multiplierLabel.y = (config.Screen.HEIGHT * 0.15) * 0.09;
+        stage.addChild(multiplierLabel);
+        console.log("Added mutliplier Label to stage");
+
+        // Add Score Label
+        scoreLabel = new createjs.Text(
+            "SCORE: " + scoreValue,
+            "30px Consolas",
+            "#ffffff"
+        );
+        scoreLabel.x = config.Screen.WIDTH * 0.8;
+        scoreLabel.y = (config.Screen.HEIGHT * 0.15) * 0.09;
+        stage.addChild(scoreLabel);
+        stage.update();
+        console.log("Added Score Label to stage");
+    }
 
     function init(): void {   
         
         // Create instruction  HTMLElements
         blocker = document.getElementById("blocker");
         instructions = document.getElementById("instructions");
+        
+        // Set Up CreateJS Canvas and Stage
+        setupCanvas();
+        
+        // Set Up Scoreboard
+        setupScoreboard();
 
         //check to see if pointerlock is supported
         havePointerLock = 'pointerLockElement' in document || 
@@ -134,6 +200,7 @@ var game = (() => {
         obstacleSlowdown = 1;
         currentObstacle = 0;
         obstaclesPlaced = 0;
+        wait = false;
 
         // Check for Pointer Lock
         if (havePointerLock) {
@@ -253,12 +320,13 @@ var game = (() => {
                 isGrounded = true;
             }
             if (object.name === "Gem") {
+                timerValue += 1 * multiplierValue;
+                updateMultiplier();
                 scene.remove(object);
-                gem.position.set(0, 2, gem.position.z - 240);
+                gem.position.set(0, 2, gem.position.z - 100);
                 gem.__dirtyPosition = true;
                 scene.add(object);
                 console.log("player hit the gem");
-                warnPlayer();
             }
             if (object.name.indexOf("LowObstacle") > -1){
                 scene.remove(object);
@@ -266,6 +334,7 @@ var game = (() => {
                 //scene.add(object);
                 console.log("player hit a Low Obstacle");
                 warnPlayer();
+                resetMultiplier();
                 obstacleSlowdown =0.02;
                 setTimeout(function() {
                     obstacleSlowdown = 1;
@@ -276,6 +345,7 @@ var game = (() => {
                 spawnNewObstacle();
                 //scene.add(object);
                 console.log("player hit a High Obstacle");
+                resetMultiplier();
                 warnPlayer();
                 obstacleSlowdown =0.02;
                 setTimeout(function() {
@@ -349,7 +419,7 @@ var game = (() => {
         gem.receiveShadow = true;
         gem.castShadow = true;
         gem.name = "Gem";
-        //scene.add(gem);
+        scene.add(gem);
         console.log("Added Gem to Scene");
         
         // Obstacles
@@ -430,6 +500,13 @@ var game = (() => {
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
         renderer.setSize(window.innerWidth, window.innerHeight);
+
+        canvas.style.width = "100%";
+        timerLabel.x = config.Screen.WIDTH * 0.1;
+        timerLabel.y = (config.Screen.HEIGHT * 0.15) * 0.09;
+        scoreLabel.x = config.Screen.WIDTH * 0.8;
+        scoreLabel.y = (config.Screen.HEIGHT * 0.15) * 0.09;
+        stage.update();
     }
 
     // Add Frame Rate Stats to the Scene
@@ -485,10 +562,52 @@ var game = (() => {
         if (currentObstacle >= 3) { currentObstacle = 0; }
         else { currentObstacle++; }
     }
+    
+    // Timer down
+    function reduceTimer(): void{
+        if (!wait){
+            wait = true;
+            setTimeout(function() {
+                timerValue -= 1;
+                wait = false;
+            }, 1000);
+        }
+    }
+    
+    // Update labels
+    function updateScore(): void {
+        scoreValue += 1 * multiplierValue;
+        timerLabel.text = "TIME: " + timerValue;
+        scoreLabel.text = "SCORE: " + scoreValue;
+        multiplierLabel.text = "BONUS: x" + multiplierValue;
+        stage.update();
+    }
+    
+    // Update Multiplier
+    function updateMultiplier(): void {
+        if (multiplierValue < 4){
+            if (multiplierStep < 5){
+                multiplierStep += 1;
+            }
+            else {
+                multiplierValue += 1;
+                multiplierStep = 1;
+            }
+        }
+    }
+    
+    // Multiplier Reset
+    function resetMultiplier(): void {
+        multiplierStep = 1;
+        multiplierValue = 1;
+    }
 
     // Check Controls
     function checkControls(){
         if (keyboardControls.enabled) {
+            
+            updateScore();
+            reduceTimer();
             
             velocity = new Vector3();
             var time: number = performance.now();
