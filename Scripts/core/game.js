@@ -19,7 +19,7 @@ var LineBasicMaterial = THREE.LineBasicMaterial;
 var Material = THREE.Material;
 var Mesh = THREE.Mesh;
 var Object3D = THREE.Object3D;
-var SpotLight = THREE.SpotLight;
+var DirectionalLight = THREE.DirectionalLight;
 var PointLight = THREE.PointLight;
 var AmbientLight = THREE.AmbientLight;
 var Color = THREE.Color;
@@ -41,7 +41,9 @@ var game = (function () {
     var stats;
     var blocker;
     var instructions;
-    var spotLight;
+    var blocker2;
+    var instructions2;
+    var directionLight;
     var ambientLight;
     var groundGeometry;
     var groundPhysicsMaterial;
@@ -72,10 +74,6 @@ var game = (function () {
     var reticleTexture;
     var reticleGeom;
     var reticleMat;
-    var reticleColliderGeom;
-    var reticleColliderMat;
-    var reticleColliderPhysicsMat;
-    var reticleCollider;
     var warningGeom;
     var warningMat;
     var warning;
@@ -93,6 +91,9 @@ var game = (function () {
     var obstaclesPlaced;
     var wait;
     var multiplierStep;
+    var raycaster;
+    var nextObstacle;
+    var gameOver;
     // CreateJS Related Variables
     var assets;
     var canvas;
@@ -122,7 +123,7 @@ var game = (function () {
     function setupScoreboard() {
         // initialize  score and timer values
         scoreValue = 0;
-        timerValue = 30;
+        timerValue = 3;
         multiplierValue = 1;
         multiplierStep = 1;
         // Add timer Label
@@ -149,6 +150,8 @@ var game = (function () {
         // Create instruction  HTMLElements
         blocker = document.getElementById("blocker");
         instructions = document.getElementById("instructions");
+        blocker2 = document.getElementById("blocker2");
+        instructions2 = document.getElementById("instructions2");
         // Set Up CreateJS Canvas and Stage
         setupCanvas();
         // Set Up Scoreboard
@@ -168,6 +171,7 @@ var game = (function () {
         currentObstacle = 0;
         obstaclesPlaced = 0;
         wait = false;
+        gameOver = false;
         // Check for Pointer Lock
         if (havePointerLock) {
             element = document.body;
@@ -198,27 +202,27 @@ var game = (function () {
         setupRenderer(); // setup the default renderer
         setupCamera(); // setup the camera
         // Ambient Light
-        ambientLight = new AmbientLight(0x909090);
+        ambientLight = new AmbientLight(0x707070);
         scene.add(ambientLight);
         console.log("Added an Ambient Light to Scene");
-        /* Spot Light
-        spotLight = new SpotLight(0xffffff);
-        spotLight.position.set(20, 40, -15);
-        spotLight.castShadow = true;
-        spotLight.intensity = 2;
-        spotLight.lookAt(new Vector3(0, 0, 0));
-        spotLight.shadowCameraNear = 2;
-        spotLight.shadowCameraFar = 200;
-        spotLight.shadowCameraLeft = -5;
-        spotLight.shadowCameraRight = 5;
-        spotLight.shadowCameraTop = 5;
-        spotLight.shadowCameraBottom = -5;
-        spotLight.shadowMapWidth = 2048;
-        spotLight.shadowMapHeight = 2048;
-        spotLight.shadowDarkness = 0.5;
-        spotLight.name = "Spot Light";
-        scene.add(spotLight);
-        console.log("Added spotLight to scene");*/
+        // Directional Light
+        directionLight = new DirectionalLight(0xffffff, 1.8);
+        directionLight.position.set(20, 40, -15);
+        directionLight.castShadow = true;
+        directionLight.intensity = 2;
+        directionLight.lookAt(new Vector3(0, 0, 0));
+        directionLight.shadowCameraNear = 2;
+        directionLight.shadowCameraFar = 200;
+        directionLight.shadowCameraLeft = -5;
+        directionLight.shadowCameraRight = 5;
+        directionLight.shadowCameraTop = 5;
+        directionLight.shadowCameraBottom = -5;
+        directionLight.shadowMapWidth = 2048;
+        directionLight.shadowMapHeight = 2048;
+        directionLight.shadowDarkness = 0.5;
+        directionLight.name = "Directional Light";
+        scene.add(directionLight);
+        console.log("Added directional light to scene");
         // Ground Objects
         groundMaterial = new PhongMaterial({ color: 0x00FFFF });
         var GroundMaterial2 = new PhongMaterial({ color: 0xFFFF00 });
@@ -276,15 +280,6 @@ var game = (function () {
                 console.log("player hit the ground 2");
                 isGrounded = true;
             }
-            if (object.name === "Gem") {
-                timerValue += 1 * multiplierValue;
-                updateMultiplier();
-                scene.remove(object);
-                gem.position.set(0, 2, gem.position.z - 100);
-                gem.__dirtyPosition = true;
-                scene.add(object);
-                console.log("player hit the gem");
-            }
             if (object.name.indexOf("LowObstacle") > -1) {
                 scene.remove(object);
                 spawnNewObstacle();
@@ -340,42 +335,19 @@ var game = (function () {
         warning.name = "Warning";
         cameraLookAt.add(warning);
         warning.position.set(0, 0, -0.3);
-        /* Add Reticle Collider
-        reticleColliderMat = new PhongMaterial({ color: 0xFF0000 });
-        reticleColliderGeom = new BoxGeometry(0.01, 0.01, 500);
-        reticleColliderPhysicsMat = Physijs.createMaterial(reticleColliderMat, 0, 0);
-
-        reticleCollider = new Physijs.BoxMesh(reticleColliderGeom, reticleColliderPhysicsMat, 0);
-        reticleCollider.position.set(0, 0, -250);
-        reticleCollider.receiveShadow = true;
-        reticleCollider.castShadow = true;
-        reticleCollider.name = "Reticle Collider";
-        reticle.add(reticleCollider);
-        console.log("Added Reticle Collider to Scene");
-        
-        reticleCollider.addEventListener('collision', (object) => {
-            if (object.name === "gem") {
-                //scene.remove(object);
-                //scene.add(object);
-                //gem.position.set(0, 2, gem.position.z - 300);
-                //gem.__dirtyPosition = true;
-                console.log("reticleCollider hit the gem");
-            }
-        });*/
         // Gem Object
         gemGeometry = new SphereGeometry(1, 4, 2);
-        gemMaterial = Physijs.createMaterial(new LambertMaterial({ color: 0x00ff00 }), 0, 0);
-        gem = new Physijs.SphereMesh(gemGeometry, gemMaterial, 0.00000000001);
-        gem.position.set(0, 2, -120);
+        gemMaterial = new LambertMaterial({ color: 0x00ff00 });
+        gem = new Mesh(gemGeometry, gemMaterial);
+        gem.position.set(0, 4, -120);
         gem.receiveShadow = true;
         gem.castShadow = true;
         gem.name = "Gem";
         scene.add(gem);
         console.log("Added Gem to Scene");
-        // Obstacles
         // Low Obstacles
         lowObstacles = [];
-        lowObstacleMat = new LambertMaterial({ color: 0x0000FF });
+        lowObstacleMat = new LambertMaterial({ color: 0x0099FF });
         lowObstacleGeom = new BoxGeometry(200, 1.5, 4);
         lowObstaclePhysicsMat = Physijs.createMaterial(lowObstacleMat, 0, 0);
         for (var i = 0; i < 5; i++) {
@@ -387,7 +359,7 @@ var game = (function () {
         }
         // High Obstacles
         highObstacles = [];
-        highObstacleMat = new LambertMaterial({ color: 0x00FF00 });
+        highObstacleMat = new LambertMaterial({ color: 0x0099FF });
         highObstacleGeom = new BoxGeometry(200, 3, 4);
         highObstaclePhysicsMat = Physijs.createMaterial(highObstacleMat, 0, 0);
         for (var i = 0; i < 5; i++) {
@@ -423,11 +395,29 @@ var game = (function () {
             // disable our mouse and keyboard controls
             mouseControls.enabled = false;
             keyboardControls.enabled = false;
-            blocker.style.display = '-webkit-box';
-            blocker.style.display = '-moz-box';
-            blocker.style.display = 'box';
-            instructions.style.display = '';
+            if (!gameOver) {
+                blocker.style.display = '-webkit-box';
+                blocker.style.display = '-moz-box';
+                blocker.style.display = 'box';
+                instructions.style.display = '';
+            }
             console.log("PointerLock disabled");
+        }
+    }
+    // Check for game over and display gameover blocker
+    function gameOverCheck() {
+        if (gameOver) {
+            // disable our mouse and keyboard controls
+            mouseControls.enabled = false;
+            keyboardControls.enabled = false;
+            // Setup Gamover Blocker
+            blocker2.style.display = '-webkit-box';
+            blocker2.style.display = '-moz-box';
+            blocker2.style.display = 'box';
+            // Leave Pointer Lock and hide instructions
+            document.exitPointerLock();
+            blocker.style.display = 'none';
+            instructions.style.display = 'none';
         }
     }
     //PointerLockError Event Handler
@@ -458,6 +448,8 @@ var game = (function () {
     }
     // Setup main game loop
     function gameLoop() {
+        // Rotate Gem
+        gem.rotation.y += 0.01;
         stats.update();
         //speedMultiplier += 0.00001;
         cameraLookAt.position.set(player.position.x, player.position.y, player.position.z - 4);
@@ -490,8 +482,9 @@ var game = (function () {
             var obstacles = lowObstacles;
             var spawnHeight = 0.75;
         }
-        obstacles[currentObstacle].position.set(0, spawnHeight, ((obstaclesPlaced + 1) * -600) - m);
+        obstacles[currentObstacle].position.set(0, spawnHeight, ((obstaclesPlaced + 1) * -800) - m);
         scene.add(obstacles[currentObstacle]);
+        nextObstacle = obstacles[currentObstacle];
         // Move Obstacle Counter Up
         obstaclesPlaced++;
         if (currentObstacle >= 3) {
@@ -499,6 +492,12 @@ var game = (function () {
         }
         else {
             currentObstacle++;
+        }
+    }
+    // check if player is past obstacle
+    function playerPassedObstacle() {
+        if (player.position.z < nextObstacle.position.z) {
+            spawnNewObstacle();
         }
     }
     // Timer down
@@ -533,19 +532,67 @@ var game = (function () {
     }
     // Multiplier Reset
     function resetMultiplier() {
-        multiplierStep = 1;
         multiplierValue = 1;
+    }
+    // Distance Check
+    function distanceCheck() {
+        /*var dX = reticle.position.x - cameraLookAt.position.x;
+        var dY = reticle.position.y - cameraLookAt.position.y;
+        var dZ = reticle.position.z - cameraLookAt.position.z;
+        var delta = new Vector3(dX, dY, dZ);*/
+        // Set up for Ray Casting
+        raycaster = new THREE.Raycaster();
+        //raycaster.set(reticle.position, new Vector3(0, 0, -1));
+        raycaster.setFromCamera(new THREE.Vector2(reticle.position.x, reticle.position.y), camera);
+        if (raycaster.intersectObject(gem).length > 0) {
+            timerValue += 1 * multiplierValue;
+            updateMultiplier();
+            resetGem();
+            console.log("Gem Hit by Ray");
+        }
+        //var angleCameraToReticle = cameraLookAt.position.angleTo(reticle.position);
+        //console.log(THREE.Math.radToDeg(angleCameraToReticle));
+        //if (reticle.position.angleTo(gem.position) < anglePlayerToReticle && reticle.position.angleTo(gem.position) > -anglePlayerToReticle){
+        //    console.log("Gem hit");
+        //}
+    }
+    // Check if Player Missed Gem
+    function playerMissedGem() {
+        if (player.position.z < gem.position.z) {
+            resetMultiplier();
+            resetGem();
+        }
+    }
+    // Reset Gem
+    function resetGem() {
+        var x = Math.floor((Math.random() * 31) + 1);
+        var y = Math.floor((Math.random() * 4) + 1);
+        var z = Math.floor((Math.random() * 200) + 1);
+        scene.remove(gem);
+        gem.position.set(x - 15, y + 3, gem.position.z - (100 + z));
+        scene.add(gem);
     }
     // Check Controls
     function checkControls() {
         if (keyboardControls.enabled) {
+            distanceCheck();
+            playerMissedGem();
+            playerPassedObstacle();
             updateScore();
-            reduceTimer();
+            gameOverCheck();
+            // Check Timer for Gameover
+            if (timerValue != 0) {
+                reduceTimer();
+            }
+            else {
+                gameOver = true;
+            }
             velocity = new Vector3();
             var time = performance.now();
             var delta = (time - prevTime) / 1000;
             var direction = new Vector3(0, 0, 0);
             velocity.z = -12000.00 * delta * obstacleSlowdown;
+            player.setAngularFactor(new THREE.Vector3(0, 0, 0));
             if (isGrounded) {
                 if (keyboardControls.moveForward) {
                     velocity.z *= 4.0;
@@ -573,10 +620,9 @@ var game = (function () {
             mouseControls.mouseX = 0;
             mouseControls.mouseY = 0;
             prevTime = time;
-            player.rotation.set(0, 0, 0);
-            player.__dirtyRotation = true;
         } // keyboardControls.enabled
         else {
+            player.setAngularFactor(new THREE.Vector3(0, 0, 0));
             player.setAngularVelocity(new Vector3(0, 0, 0));
             player.setLinearVelocity(new Vector3(0, 0, 0));
         }
