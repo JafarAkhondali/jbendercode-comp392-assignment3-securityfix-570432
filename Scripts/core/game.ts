@@ -400,7 +400,7 @@ var game = (() => {
         reward.position.set(0, 0, -0.3);
         
         // Gem Object
-        gemGeometry = new SphereGeometry(1, 4, 2);
+        gemGeometry = new SphereGeometry(1, 5, 2);
         gemMaterial = new PhongMaterial({ color: 0x00ff00, emissive: 0x00FF00, transparent: true, opacity: 0.7 });
         gem = new Mesh(gemGeometry, gemMaterial);
         gem.position.set(0, 4, -120);
@@ -423,7 +423,7 @@ var game = (() => {
         lowObstacleMat.transparent = true;
         lowObstacleMat.opacity = 0.7;
         lowObstacleMat.map = lowObstacleTexture;
-        lowObstacleGeom = new BoxGeometry(200, 1.5, 4);
+        lowObstacleGeom = new BoxGeometry(200, 2, 4);
         lowObstaclePhysicsMat = Physijs.createMaterial(lowObstacleMat, 0, 0);
 
         for (var i = 0; i < 5; i++) {
@@ -553,7 +553,6 @@ var game = (() => {
         
         stats.update();
         
-        //speedMultiplier += 0.00001;
         cameraLookAt.position.set(player.position.x,  player.position.y, player.position.z - 4);
         
         checkControls();
@@ -594,8 +593,8 @@ var game = (() => {
     function spawnNewObstacle(): void {
         var x = Math.floor((Math.random() * 10) + 1);
         var m = Math.floor((Math.random() * 600) + 1);
-        if (x > 5){ var obstacles: Physijs.Mesh[] = highObstacles; var spawnHeight = 2; }
-        else { var obstacles: Physijs.Mesh[] = lowObstacles;  var spawnHeight = 0.75; }
+        if (x > 5){ var obstacles: Physijs.Mesh[] = highObstacles; var spawnHeight = 2.5; }
+        else { var obstacles: Physijs.Mesh[] = lowObstacles;  var spawnHeight = 1; }
         
         obstacles[currentObstacle].position.set(0, spawnHeight, ((obstaclesPlaced + 1) * -800) - m);
         scene.add(obstacles[currentObstacle]);
@@ -704,6 +703,8 @@ var game = (() => {
     function checkControls(){
         if (keyboardControls.enabled) {
             
+            speedMultiplier += 0.001;
+            
             distanceCheck();
             playerMissedGem();
             playerPassedObstacle();
@@ -719,7 +720,7 @@ var game = (() => {
             var delta: number = (time - prevTime) / 1000;
             var direction = new Vector3(0, 0, 0);
 
-            velocity.z = -12000.00 * delta * obstacleSlowdown;
+            velocity.z = -12000.00 * delta * obstacleSlowdown * speedMultiplier;
 
             player.setAngularFactor(new THREE.Vector3(0, 0, 0));
             
@@ -775,19 +776,19 @@ var game = (() => {
         cameraLookAt.rotation.y = THREE.Math.clamp(cameraYaw, nadir, zenith);
         
         // Constrain Reticle
-        if (reticle.position.x > 0.12){
+        if (reticle.position.x > 0.16){
             reticle.position.x -= 0.001;
         }
-        else if (reticle.position.x < -0.12) {
+        else if (reticle.position.x < -0.16) {
             reticle.position.x += 0.001;
         }
         else{
             reticle.position.x += mouseControls.mouseX;
         }
-        if (reticle.position.y > 0.06){
+        if (reticle.position.y > 0.075){
             reticle.position.y -= 0.001;
         }
-        else if (reticle.position.y < -0.06) {
+        else if (reticle.position.y < -0.075) {
             reticle.position.y += 0.001;
         }
         else{
