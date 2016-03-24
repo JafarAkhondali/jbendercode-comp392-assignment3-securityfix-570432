@@ -49,7 +49,6 @@ var game = (function () {
     var groundPhysicsMaterial;
     var groundMaterial;
     var groundTexture;
-    var groundTextureNormal;
     var ground;
     var ground2;
     var clock;
@@ -77,6 +76,8 @@ var game = (function () {
     var warningGeom;
     var warningMat;
     var warning;
+    var rewardMat;
+    var reward;
     var lowObstacles;
     var lowObstacleGeom;
     var lowObstacleMat;
@@ -105,7 +106,9 @@ var game = (function () {
     var timerValue;
     var multiplierValue;
     var manifest = [
-        { id: "reticle", src: "../../Assets/images/reticle.png" }
+        { id: "reticle", src: "../../Assets/images/reticle.png" },
+        { id: "ground", src: "../../Assets/images/hex-ground.jpg" },
+        { id: "glass", src: "../../Assets/images/glass.jpg" },
     ];
     function preload() {
         assets = new createjs.LoadQueue();
@@ -123,7 +126,7 @@ var game = (function () {
     function setupScoreboard() {
         // initialize  score and timer values
         scoreValue = 0;
-        timerValue = 3;
+        timerValue = 30;
         multiplierValue = 1;
         multiplierStep = 1;
         // Add timer Label
@@ -224,11 +227,14 @@ var game = (function () {
         scene.add(directionLight);
         console.log("Added directional light to scene");
         // Ground Objects
-        groundMaterial = new PhongMaterial({ color: 0x00FFFF });
-        var GroundMaterial2 = new PhongMaterial({ color: 0xFFFF00 });
+        groundTexture = new THREE.TextureLoader().load('../../Assets/images/hex-ground.jpg');
+        groundTexture.wrapS = THREE.RepeatWrapping;
+        groundTexture.wrapT = THREE.RepeatWrapping;
+        groundTexture.repeat.set(256, 256);
+        groundMaterial = new PhongMaterial({ color: 0x00DDFF, emissive: 0x333333 });
+        groundMaterial.map = groundTexture;
         groundGeometry = new BoxGeometry(1600, 0.5, 3200);
         groundPhysicsMaterial = Physijs.createMaterial(groundMaterial, 0, 0);
-        var groundPhysicsMaterial2 = Physijs.createMaterial(GroundMaterial2, 0, 0);
         // Ground 1
         ground = new Physijs.ConvexMesh(groundGeometry, groundPhysicsMaterial, 0);
         ground.receiveShadow = true;
@@ -238,7 +244,7 @@ var game = (function () {
         ground.__dirtyPosition = true;
         console.log("Added Ground 1 to scene");
         // Ground 2
-        ground2 = new Physijs.ConvexMesh(groundGeometry, groundPhysicsMaterial2, 0);
+        ground2 = new Physijs.ConvexMesh(groundGeometry, groundPhysicsMaterial, 0);
         ground2.receiveShadow = true;
         ground2.name = "Ground 2";
         ground2.position.set(0, 0, -3200);
@@ -318,7 +324,7 @@ var game = (function () {
         reticleTexture.wrapT = THREE.RepeatWrapping;
         reticleTexture.repeat.set(1, 1);
         reticleGeom = new PlaneGeometry(0.16, 0.09);
-        reticleMat = new LambertMaterial();
+        reticleMat = new PhongMaterial({ emissive: 0x0000FF });
         reticleMat.map = reticleTexture;
         reticleMat.transparent = true;
         reticleMat.opacity = 1;
@@ -335,9 +341,17 @@ var game = (function () {
         warning.name = "Warning";
         cameraLookAt.add(warning);
         warning.position.set(0, 0, -0.3);
+        // Player Reward
+        rewardMat = new LambertMaterial({ color: 0x00FF00 });
+        rewardMat.transparent = true;
+        rewardMat.opacity = 0;
+        reward = new Mesh(warningGeom, rewardMat);
+        reward.name = "Reward";
+        cameraLookAt.add(reward);
+        reward.position.set(0, 0, -0.3);
         // Gem Object
         gemGeometry = new SphereGeometry(1, 4, 2);
-        gemMaterial = new LambertMaterial({ color: 0x00ff00 });
+        gemMaterial = new PhongMaterial({ color: 0x00ff00, emissive: 0x00FF00, transparent: true, opacity: 0.7 });
         gem = new Mesh(gemGeometry, gemMaterial);
         gem.position.set(0, 4, -120);
         gem.receiveShadow = true;
@@ -347,7 +361,15 @@ var game = (function () {
         console.log("Added Gem to Scene");
         // Low Obstacles
         lowObstacles = [];
-        lowObstacleMat = new LambertMaterial({ color: 0x0099FF });
+        // Texture
+        lowObstacleTexture = new THREE.TextureLoader().load('../../Assets/images/glass.jpg');
+        lowObstacleTexture.wrapS = THREE.RepeatWrapping;
+        lowObstacleTexture.wrapT = THREE.RepeatWrapping;
+        lowObstacleTexture.repeat.set(4, 4);
+        lowObstacleMat = new PhongMaterial({ color: 0xFF0000, emissive: 0xFF0000 });
+        lowObstacleMat.transparent = true;
+        lowObstacleMat.opacity = 0.7;
+        lowObstacleMat.map = lowObstacleTexture;
         lowObstacleGeom = new BoxGeometry(200, 1.5, 4);
         lowObstaclePhysicsMat = Physijs.createMaterial(lowObstacleMat, 0, 0);
         for (var i = 0; i < 5; i++) {
@@ -359,7 +381,15 @@ var game = (function () {
         }
         // High Obstacles
         highObstacles = [];
-        highObstacleMat = new LambertMaterial({ color: 0x0099FF });
+        // Texture
+        highObstacleTexture = new THREE.TextureLoader().load('../../Assets/images/glass.jpg');
+        highObstacleTexture.wrapS = THREE.RepeatWrapping;
+        highObstacleTexture.wrapT = THREE.RepeatWrapping;
+        highObstacleTexture.repeat.set(4, 4);
+        highObstacleMat = new PhongMaterial({ color: 0xFF0000, emissive: 0xFF0000 });
+        highObstacleMat.transparent = true;
+        highObstacleMat.opacity = 0.7;
+        highObstacleMat.map = highObstacleTexture;
         highObstacleGeom = new BoxGeometry(200, 3, 4);
         highObstaclePhysicsMat = Physijs.createMaterial(highObstacleMat, 0, 0);
         for (var i = 0; i < 5; i++) {
@@ -470,6 +500,17 @@ var game = (function () {
             }
         }, 500);
     }
+    // Player Reward
+    function rewardPlayer() {
+        var time = performance.now();
+        var delta = (time - prevTime) / 1000;
+        rewardMat.opacity = 0.4;
+        setTimeout(function () {
+            while (rewardMat.opacity > 0) {
+                rewardMat.opacity = 0;
+            }
+        }, 500);
+    }
     // Spawn Obstacles
     function spawnNewObstacle() {
         var x = Math.floor((Math.random() * 10) + 1);
@@ -546,6 +587,7 @@ var game = (function () {
         raycaster.setFromCamera(new THREE.Vector2(reticle.position.x, reticle.position.y), camera);
         if (raycaster.intersectObject(gem).length > 0) {
             timerValue += 1 * multiplierValue;
+            rewardPlayer();
             updateMultiplier();
             resetGem();
             console.log("Gem Hit by Ray");
@@ -661,7 +703,7 @@ var game = (function () {
     // Setup default renderer
     function setupRenderer() {
         renderer = new Renderer({ antialias: true });
-        renderer.setClearColor(0x404040, 1.0);
+        renderer.setClearColor(0xFFFFFF, 1.0);
         renderer.setPixelRatio(window.devicePixelRatio);
         renderer.setSize(CScreen.WIDTH, CScreen.HEIGHT);
         renderer.shadowMap.enabled = true;
@@ -669,7 +711,7 @@ var game = (function () {
     }
     // Setup main camera for the scene
     function setupCamera() {
-        camera = new PerspectiveCamera(35, config.Screen.RATIO, 0.1, 1000);
+        camera = new PerspectiveCamera(45, config.Screen.RATIO, 0.1, 1000);
         //camera.position.set(0, 30, 80);         // 3P
         camera.position.set(0, 0, 0); // FP
         console.log("Finished setting up Camera...");
