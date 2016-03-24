@@ -370,7 +370,7 @@ var game = (() => {
         reticleTexture.wrapT = THREE.RepeatWrapping;
         reticleTexture.repeat.set(1, 1);
         
-        reticleGeom = new PlaneGeometry(0.16, 0.09);
+        reticleGeom = new PlaneGeometry(0.08, 0.045);
         reticleMat = new PhongMaterial({emissive: 0x0000FF});
         reticleMat.map = reticleTexture;
         reticleMat.transparent = true;
@@ -653,16 +653,20 @@ var game = (() => {
     
     // Distance Check
     function distanceCheck(): void{
-        /*var dX = reticle.position.x - cameraLookAt.position.x;
-        var dY = reticle.position.y - cameraLookAt.position.y;
-        var dZ = reticle.position.z - cameraLookAt.position.z;
-        var delta = new Vector3(dX, dY, dZ);*/
+        console.log("CAMERA POS: (" + camera.position.x + ", " + camera.position.y + ", " + camera.position.z + ")");
+        console.log("LOOKAT POS: (" + cameraLookAt.position.x + ", " + cameraLookAt.position.y + ", " + cameraLookAt.position.z + ")");
+        console.log("RETICL POS: (" + reticle.position.x + ", " + reticle.position.y + ", " + reticle.position.z + ")");
+        console.log("CAMERA AGL: (" + camera.rotation.x + ", " + camera.rotation.y + ", " + camera.rotation.z + ")");
+        console.log("LOOKAT AGL: (" + cameraLookAt.rotation.x + ", " + cameraLookAt.rotation.y + ", " + cameraLookAt.rotation.z + ")");
+        console.log("RETICL AGL: (" + reticle.rotation.x + ", " + reticle.rotation.y + ", " + reticle.rotation.z + ")");
         
         // Set up for Ray Casting
         raycaster = new THREE.Raycaster();
+        raycaster.near = 0.1;
+        raycaster.far = 1000;
         
         //raycaster.set(reticle.position, new Vector3(0, 0, -1));
-        raycaster.setFromCamera( new THREE.Vector2(reticle.position.x, reticle.position.y), camera );
+        raycaster.setFromCamera( new THREE.Vector2(reticle.position.x / 0.16, reticle.position.y / 0.075), camera );
         if (raycaster.intersectObject(gem).length > 0){
             timerValue += 1 * multiplierValue;
             rewardPlayer();
@@ -703,7 +707,7 @@ var game = (() => {
     function checkControls(){
         if (keyboardControls.enabled) {
             
-            speedMultiplier += 0.001;
+            speedMultiplier += 0.0001;
             
             distanceCheck();
             playerMissedGem();
@@ -765,8 +769,8 @@ var game = (() => {
 
     // Camera Look function
     function cameraLook(): void {
-        var zenith: number = THREE.Math.degToRad(3);
-        var nadir: number = THREE.Math.degToRad(-3);
+        var zenith: number = THREE.Math.degToRad(2);
+        var nadir: number = THREE.Math.degToRad(-2);
         
         var cameraPitch: number = cameraLookAt.rotation.x + mouseControls.pitch;
         var cameraYaw: number = cameraLookAt.rotation.y + mouseControls.yaw;

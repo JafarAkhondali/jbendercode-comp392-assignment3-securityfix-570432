@@ -41,6 +41,10 @@ body {
     font-size: 40px;
 }
 
+#title {
+    font-size: 52px;
+}
+
 #blocker2 {
     position: absolute;
     width: 100%;
