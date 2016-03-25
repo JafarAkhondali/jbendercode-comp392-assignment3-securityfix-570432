@@ -619,7 +619,7 @@ var game = (function () {
     // Check Controls
     function checkControls() {
         if (keyboardControls.enabled) {
-            speedMultiplier += 0.0001;
+            speedMultiplier += 0.0008;
             distanceCheck();
             playerMissedGem();
             playerPassedObstacle();

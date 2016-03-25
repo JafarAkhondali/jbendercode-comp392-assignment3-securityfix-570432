@@ -707,7 +707,7 @@ var game = (() => {
     function checkControls(){
         if (keyboardControls.enabled) {
             
-            speedMultiplier += 0.0001;
+            speedMultiplier += 0.0008;
             
             distanceCheck();
             playerMissedGem();
