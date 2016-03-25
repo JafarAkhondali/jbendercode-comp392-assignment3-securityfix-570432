@@ -1,5 +1,8 @@
 /// <reference path="_reference.ts"/>
 // MAIN GAME FILE
+// Josh Bender - 300746563
+// Assignment 3 for Comp 392 - Advanced Graphics
+// Last Updated Friday, Match 25th
 // THREEJS Aliases
 var Scene = Physijs.Scene;
 var Renderer = THREE.WebGLRenderer;
@@ -109,6 +112,9 @@ var game = (function () {
         { id: "reticle", src: "../../Assets/images/reticle.png" },
         { id: "ground", src: "../../Assets/images/hex-ground.jpg" },
         { id: "glass", src: "../../Assets/images/glass.jpg" },
+        { id: "gameover", src: "../../Assets/audio/gameover.wav" },
+        { id: "gem", src: "../../Assets/audio/gem.wav" },
+        { id: "thud", src: "../../Assets/audio/thud.wav" }
     ];
     function preload() {
         assets = new createjs.LoadQueue();
@@ -134,20 +140,20 @@ var game = (function () {
         timerLabel.x = config.Screen.WIDTH * 0.1;
         timerLabel.y = (config.Screen.HEIGHT * 0.15) * 0.09;
         stage.addChild(timerLabel);
-        console.log("Added timer Label to stage");
+        //console.log("Added timer Label to stage");
         // Add multiplier Label
         multiplierLabel = new createjs.Text("BONUS: x" + multiplierValue, "30px Consolas", "#ffffff");
         multiplierLabel.x = config.Screen.WIDTH * 0.45;
         multiplierLabel.y = (config.Screen.HEIGHT * 0.15) * 0.09;
         stage.addChild(multiplierLabel);
-        console.log("Added mutliplier Label to stage");
+        //console.log("Added mutliplier Label to stage");
         // Add Score Label
         scoreLabel = new createjs.Text("SCORE: " + scoreValue, "30px Consolas", "#ffffff");
         scoreLabel.x = config.Screen.WIDTH * 0.8;
         scoreLabel.y = (config.Screen.HEIGHT * 0.15) * 0.09;
         stage.addChild(scoreLabel);
         stage.update();
-        console.log("Added Score Label to stage");
+        //console.log("Added Score Label to stage");
     }
     function init() {
         // Create instruction  HTMLElements
@@ -175,23 +181,23 @@ var game = (function () {
         obstaclesPlaced = 0;
         wait = false;
         gameOver = false;
-        // Check for Pointer Lock
+        // Check to see if we have pointerLock
         if (havePointerLock) {
             element = document.body;
             instructions.addEventListener('click', function () {
                 // Ask the user for pointer lock
-                console.log("Requesting PointerLock");
+                //console.log("Requesting PointerLock");
                 element.requestPointerLock = element.requestPointerLock ||
                     element.mozRequestPointerLock ||
                     element.webkitRequestPointerLock;
                 element.requestPointerLock();
             });
-            document.addEventListener('pointerlockchange', pointerLockChange, false);
-            document.addEventListener('mozpointerlockchange', pointerLockChange, false);
-            document.addEventListener('webkitpointerlockchange', pointerLockChange, false);
-            document.addEventListener('pointerlockerror', pointerLockError, false);
-            document.addEventListener('mozpointerlockerror', pointerLockError, false);
-            document.addEventListener('webkitpointerlockerror', pointerLockError, false);
+            document.addEventListener('pointerlockchange', pointerLockChange);
+            document.addEventListener('mozpointerlockchange', pointerLockChange);
+            document.addEventListener('webkitpointerlockchange', pointerLockChange);
+            document.addEventListener('pointerlockerror', pointerLockError);
+            document.addEventListener('mozpointerlockerror', pointerLockError);
+            document.addEventListener('webkitpointerlockerror', pointerLockError);
         }
         // Scene changes for Physijs
         scene.name = "Main";
@@ -207,7 +213,7 @@ var game = (function () {
         // Ambient Light
         ambientLight = new AmbientLight(0x707070);
         scene.add(ambientLight);
-        console.log("Added an Ambient Light to Scene");
+        //console.log("Added an Ambient Light to Scene");
         // Directional Light
         directionLight = new DirectionalLight(0xffffff, 1.8);
         directionLight.position.set(20, 40, -15);
@@ -225,7 +231,7 @@ var game = (function () {
         directionLight.shadowDarkness = 0.5;
         directionLight.name = "Directional Light";
         scene.add(directionLight);
-        console.log("Added directional light to scene");
+        //console.log("Added directional light to scene");
         // Ground Objects
         groundTexture = new THREE.TextureLoader().load('../../Assets/images/hex-ground.jpg');
         groundTexture.wrapS = THREE.RepeatWrapping;
@@ -242,7 +248,7 @@ var game = (function () {
         scene.add(ground);
         ground.position.set(0, 0, 0);
         ground.__dirtyPosition = true;
-        console.log("Added Ground 1 to scene");
+        //console.log("Added Ground 1 to scene");
         // Ground 2
         ground2 = new Physijs.ConvexMesh(groundGeometry, groundPhysicsMaterial, 0);
         ground2.receiveShadow = true;
@@ -250,7 +256,7 @@ var game = (function () {
         ground2.position.set(0, 0, -3200);
         ground2.__dirtyPosition = true;
         scene.add(ground2);
-        console.log("Added Ground 2 to scene");
+        //console.log("Added Ground 2 to scene");
         // Player Object
         playerMaterial = new PhongMaterial({ color: 0xFF0000 });
         playerGeometry = new BoxGeometry(20, 4, 8);
@@ -261,7 +267,7 @@ var game = (function () {
         player.castShadow = true;
         player.name = "Player";
         scene.add(player);
-        console.log("Added Player to Scene");
+        //console.log("Added Player to Scene");
         // Player Collisions
         player.addEventListener('collision', function (object) {
             if (object.name === "Ground 1") {
@@ -272,7 +278,7 @@ var game = (function () {
                     }, 1000);
                 }
                 onGround1 = true;
-                console.log("player hit the ground 1");
+                //console.log("player hit the ground 1");
                 isGrounded = true;
             }
             if (object.name === "Ground 2") {
@@ -283,14 +289,14 @@ var game = (function () {
                     }, 1000);
                 }
                 onGround1 = false;
-                console.log("player hit the ground 2");
+                //console.log("player hit the ground 2");
                 isGrounded = true;
             }
             if (object.name.indexOf("LowObstacle") > -1) {
                 scene.remove(object);
                 spawnNewObstacle();
                 //scene.add(object);
-                console.log("player hit a Low Obstacle");
+                //console.log("player hit a Low Obstacle");
                 warnPlayer();
                 resetMultiplier();
                 obstacleSlowdown = 0.02;
@@ -302,7 +308,7 @@ var game = (function () {
                 scene.remove(object);
                 spawnNewObstacle();
                 //scene.add(object);
-                console.log("player hit a High Obstacle");
+                //console.log("player hit a High Obstacle");
                 resetMultiplier();
                 warnPlayer();
                 obstacleSlowdown = 0.02;
@@ -358,7 +364,7 @@ var game = (function () {
         gem.castShadow = true;
         gem.name = "Gem";
         scene.add(gem);
-        console.log("Added Gem to Scene");
+        //console.log("Added Gem to Scene");
         // Low Obstacles
         lowObstacles = [];
         // Texture
@@ -403,7 +409,7 @@ var game = (function () {
         spawnNewObstacle();
         // Add framerate stats
         addStatsObject();
-        console.log("Added Stats to scene...");
+        //console.log("Added Stats to scene...");
         // Render the scene	
         document.body.appendChild(renderer.domElement);
         gameLoop();
@@ -413,7 +419,7 @@ var game = (function () {
     }
     //PointerLockChange Event Handler
     function pointerLockChange(event) {
-        if (document.pointerLockElement === element /*||
+        if (document.pointerLockElement === element /* ||
             document.mozPointerLockElement === element ||
             document.webkitPointerLockElement === element*/) {
             // enable our mouse and keyboard controls
@@ -431,7 +437,6 @@ var game = (function () {
                 blocker.style.display = 'box';
                 instructions.style.display = '';
             }
-            console.log("PointerLock disabled");
         }
     }
     // Check for game over and display gameover blocker
@@ -448,12 +453,14 @@ var game = (function () {
             document.exitPointerLock();
             blocker.style.display = 'none';
             instructions.style.display = 'none';
+            // Play GameoverSound
+            createjs.Sound.play('gameover');
         }
     }
     //PointerLockError Event Handler
     function pointerLockError(event) {
         instructions.style.display = '';
-        console.log("PointerLock Error Detected!!");
+        //console.log("PointerLock Error Detected!!");
     }
     // Window Resize Event Handler
     function onWindowResize() {
@@ -492,6 +499,8 @@ var game = (function () {
     function warnPlayer() {
         var time = performance.now();
         var delta = (time - prevTime) / 1000;
+        // Play Reward Sound
+        createjs.Sound.play('thud');
         warningMat.opacity = 0.4;
         setTimeout(function () {
             while (warningMat.opacity > 0) {
@@ -503,6 +512,8 @@ var game = (function () {
     function rewardPlayer() {
         var time = performance.now();
         var delta = (time - prevTime) / 1000;
+        // Play Reward Sound
+        createjs.Sound.play('gem');
         rewardMat.opacity = 0.4;
         setTimeout(function () {
             while (rewardMat.opacity > 0) {
@@ -576,12 +587,6 @@ var game = (function () {
     }
     // Distance Check
     function distanceCheck() {
-        console.log("CAMERA POS: (" + camera.position.x + ", " + camera.position.y + ", " + camera.position.z + ")");
-        console.log("LOOKAT POS: (" + cameraLookAt.position.x + ", " + cameraLookAt.position.y + ", " + cameraLookAt.position.z + ")");
-        console.log("RETICL POS: (" + reticle.position.x + ", " + reticle.position.y + ", " + reticle.position.z + ")");
-        console.log("CAMERA AGL: (" + camera.rotation.x + ", " + camera.rotation.y + ", " + camera.rotation.z + ")");
-        console.log("LOOKAT AGL: (" + cameraLookAt.rotation.x + ", " + cameraLookAt.rotation.y + ", " + cameraLookAt.rotation.z + ")");
-        console.log("RETICL AGL: (" + reticle.rotation.x + ", " + reticle.rotation.y + ", " + reticle.rotation.z + ")");
         // Set up for Ray Casting
         raycaster = new THREE.Raycaster();
         raycaster.near = 0.1;
@@ -593,13 +598,7 @@ var game = (function () {
             rewardPlayer();
             updateMultiplier();
             resetGem();
-            console.log("Gem Hit by Ray");
         }
-        //var angleCameraToReticle = cameraLookAt.position.angleTo(reticle.position);
-        //console.log(THREE.Math.radToDeg(angleCameraToReticle));
-        //if (reticle.position.angleTo(gem.position) < anglePlayerToReticle && reticle.position.angleTo(gem.position) > -anglePlayerToReticle){
-        //    console.log("Gem hit");
-        //}
     }
     // Check if Player Missed Gem
     function playerMissedGem() {
@@ -711,14 +710,13 @@ var game = (function () {
         renderer.setPixelRatio(window.devicePixelRatio);
         renderer.setSize(CScreen.WIDTH, CScreen.HEIGHT);
         renderer.shadowMap.enabled = true;
-        console.log("Finished setting up Renderer...");
+        //console.log("Finished setting up Renderer...");
     }
     // Setup main camera for the scene
     function setupCamera() {
         camera = new PerspectiveCamera(45, config.Screen.RATIO, 0.1, 1000);
-        //camera.position.set(0, 30, 80);         // 3P
         camera.position.set(0, 0, 0); // FP
-        console.log("Finished setting up Camera...");
+        //console.log("Finished setting up Camera...");
     }
     window.onload = preload;
     return {
